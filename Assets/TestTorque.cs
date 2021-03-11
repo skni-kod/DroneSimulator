@@ -116,10 +116,10 @@ public class TestTorque : MonoBehaviour
         float currentforwardVelocity = -velocity.z;
         float currentrightVelocity = velocity.x;
         
-        output = currentrightVelocity;
+        output = currentYawVelocity;
 
         float targetVerticalVelocity = input.x * 5f;
-        float targetYawVelocity = -input.y;
+        float targetYawVelocity = -input.y * Mathf.Deg2Rad * 200;
         float targetForwardVelocity = -input.w * 5;
         float targetRightVelocity = input.z * 5;
         
@@ -129,7 +129,7 @@ public class TestTorque : MonoBehaviour
         float targetRollVelocity = rollAnglePID.CalculateCurrentAnswer(currentRollAngle, targetRollAngle);
         float targetPitchVelocity = pitchAnglePID.CalculateCurrentAnswer(currentPitchAngle, targetPitchAngle);
         
-        target = targetRightVelocity;
+        target = targetYawVelocity;
 
         float thrust = thurstPID.CalculateCurrentAnswer(currentVerticalVelocity, targetVerticalVelocity);
         float yaw = yawPID.CalculateCurrentAnswer(currentYawVelocity, targetYawVelocity);
