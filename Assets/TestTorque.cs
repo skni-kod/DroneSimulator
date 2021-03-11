@@ -25,7 +25,7 @@ public class TestTorque : MonoBehaviour
         public float Kd = 1.0f;
         public float OutputMax = 20.0f;
         public float OutputMin = 0.0f;
-        
+
         public float CalculateCurrentAnswer(float current, float target)
         {
             float error = target - current;
@@ -64,6 +64,12 @@ public class TestTorque : MonoBehaviour
     public PID rollPID = new PID();
     public PID yawPID = new PID();
     public PID pitchPID = new PID();
+
+    public PID pitchAnglePID = new PID();
+    public PID rollAnglePID = new PID();
+
+    public PID forwardVelocityPID = new PID();
+    public PID rightVelocityPID = new PID();
     
     [UPyPlot.UPyPlotController.UPyProbe]
     public float output = 0.0f;
@@ -100,19 +106,30 @@ public class TestTorque : MonoBehaviour
         }
         
         float currentVerticalVelocity = rb.velocity.y;
-        var velocity = transform.InverseTransformDirection(rb.angularVelocity);
-        float currentRollVelocity = -velocity.z;
-        float currentYawVelocity = -velocity.y;
-        float currentPitchVelocity = -velocity.x;
+        var angularVelocity = transform.InverseTransformDirection(rb.angularVelocity);
+        float currentRollVelocity = -angularVelocity.z;
+        float currentYawVelocity = -angularVelocity.y;
+        float currentPitchVelocity = -angularVelocity.x;
+        float currentPitchAngle = NormalizeAngle(-rb.rotation.eulerAngles.x, -180, 180);
+        float currentRollAngle = NormalizeAngle(-rb.rotation.eulerAngles.z, -180, 180);
+        var velocity = transform.InverseTransformDirection(rb.velocity);
+        float currentforwardVelocity = -velocity.z;
+        float currentrightVelocity = velocity.x;
         
-        output = currentVerticalVelocity;
+        output = currentrightVelocity;
 
         float targetVerticalVelocity = input.x * 5f;
         float targetYawVelocity = -input.y;
-        float targetRollVelocity = input.z;
-        float targetPitchVelocity = -input.w;
+        float targetForwardVelocity = -input.w * 5;
+        float targetRightVelocity = input.z * 5;
         
-        target = targetVerticalVelocity;
+        float targetPitchAngle = forwardVelocityPID.CalculateCurrentAnswer(currentforwardVelocity, targetForwardVelocity);
+        float targetRollAngle = rightVelocityPID.CalculateCurrentAnswer(currentrightVelocity, targetRightVelocity);
+        
+        float targetRollVelocity = rollAnglePID.CalculateCurrentAnswer(currentRollAngle, targetRollAngle);
+        float targetPitchVelocity = pitchAnglePID.CalculateCurrentAnswer(currentPitchAngle, targetPitchAngle);
+        
+        target = targetRightVelocity;
 
         float thrust = thurstPID.CalculateCurrentAnswer(currentVerticalVelocity, targetVerticalVelocity);
         float yaw = yawPID.CalculateCurrentAnswer(currentYawVelocity, targetYawVelocity);
@@ -161,5 +178,12 @@ public class TestTorque : MonoBehaviour
 
         float torque = mfr + mbl - mfl - mbr;
         rb.AddRelativeTorque(transform.up * 0.8f * torque);
+    }
+    
+    public float NormalizeAngle(float value, float start, float end)
+    {
+        float width = end - start;
+        float offsetValue = value - start;
+        return ( offsetValue - ( Mathf.Floor( offsetValue / width ) * width ) ) + start ;
     }
 }

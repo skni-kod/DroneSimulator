@@ -558,8 +558,34 @@ MonoBehaviour:
     Kd: 0
     OutputMax: 20
     OutputMin: -20
+  pitchAnglePID:
+    Ki: 0
+    Kp: 1
+    Kd: 0
+    OutputMax: 3.9
+    OutputMin: -3.9
+  rollAnglePID:
+    Ki: 0
+    Kp: 1
+    Kd: 0
+    OutputMax: 3.9
+    OutputMin: -3.9
+  forwardVelocityPID:
+    Ki: 0
+    Kp: 15
+    Kd: 0
+    OutputMax: 50
+    OutputMin: -50
+  rightVelocityPID:
+    Ki: 0
+    Kp: 15
+    Kd: 0
+    OutputMax: 50
+    OutputMin: -50
   output: 0
   target: 0
+  typeOfInput: 0
+  externalInput: {x: 0, y: 0, z: 0, w: 0}
 --- !u!54 &1190860863
 Rigidbody:
   m_ObjectHideFlags: 0
