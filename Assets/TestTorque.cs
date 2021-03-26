@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -80,12 +81,15 @@ public class TestTorque : MonoBehaviour
     public TypeOfInput typeOfInput = TypeOfInput.GAMEPAD;
     public Vector4 externalInput = new Vector4();
 
-    void Start()
+    public float yaw;
+    public bool ownYawPid = true;
+    
+    public void Start()
     {
         rb = GetComponent<Rigidbody>();
     }
 
-    void FixedUpdate()
+    public void FixedUpdate()
     {
         Vector4 input = new Vector4();
 
@@ -108,7 +112,7 @@ public class TestTorque : MonoBehaviour
         float currentVerticalVelocity = rb.velocity.y;
         var angularVelocity = transform.InverseTransformDirection(rb.angularVelocity);
         float currentRollVelocity = -angularVelocity.z;
-        float currentYawVelocity = -angularVelocity.y;
+        float currentYawVelocity = angularVelocity.y;
         float currentPitchVelocity = -angularVelocity.x;
         float currentPitchAngle = NormalizeAngle(-rb.rotation.eulerAngles.x, -180, 180);
         float currentRollAngle = NormalizeAngle(-rb.rotation.eulerAngles.z, -180, 180);
@@ -119,7 +123,7 @@ public class TestTorque : MonoBehaviour
         output = currentYawVelocity;
 
         float targetVerticalVelocity = input.x * 5f;
-        float targetYawVelocity = -input.y * Mathf.Deg2Rad * 200;
+        float targetYawVelocity = input.y * Mathf.Deg2Rad * 200;
         float targetForwardVelocity = -input.w * 5;
         float targetRightVelocity = input.z * 5;
         
@@ -132,7 +136,8 @@ public class TestTorque : MonoBehaviour
         target = targetYawVelocity;
 
         float thrust = thurstPID.CalculateCurrentAnswer(currentVerticalVelocity, targetVerticalVelocity);
-        float yaw = yawPID.CalculateCurrentAnswer(currentYawVelocity, targetYawVelocity);
+        if(ownYawPid)
+            yaw = yawPID.CalculateCurrentAnswer(currentYawVelocity, targetYawVelocity);
         float pitch = pitchPID.CalculateCurrentAnswer(currentPitchVelocity, targetPitchVelocity);
         float roll = rollPID.CalculateCurrentAnswer(currentRollVelocity, targetRollVelocity);
 
@@ -146,6 +151,9 @@ public class TestTorque : MonoBehaviour
         //Debug.Log("++++++++++++++++++++++++++++++++++++++++++++++");
         
         MotorMixing(thrust, yaw, pitch, roll);
+        
+        Debug.Log("Inertia Tensor: " + rb.inertiaTensor);
+        Debug.Log("Inertia Tensor Rotation: " + rb.inertiaTensorRotation.eulerAngles);
     }
 
     
@@ -166,6 +174,8 @@ public class TestTorque : MonoBehaviour
         mbr = Mathf.Clamp(mbr, 0, 20);
         mbl = Mathf.Clamp(mbl, 0, 20);
         
+        Debug.Log("Mfr: " + mfr + " Mfl: " + mfl + " Mbl: " + mbl + " Mbr: " + mbr );
+        
         rb.AddForceAtPosition(this.transform.up * mfr, mfrTransform.position);
         rb.AddForceAtPosition(this.transform.up * mfl, mflTransform.position);
         rb.AddForceAtPosition(this.transform.up * mbr, mrrTransform.position);
@@ -175,9 +185,11 @@ public class TestTorque : MonoBehaviour
         Debug.DrawLine(mflTransform.position, mflTransform.position + this.transform.up * mfl);
         Debug.DrawLine(mrrTransform.position, mrrTransform.position + this.transform.up * mbr);
         Debug.DrawLine(mrlTransform.position, mrlTransform.position + this.transform.up * mbl);
+        Debug.DrawLine(transform.position, transform.position + transform.forward * 3, Color.red);
 
-        float torque = mfr + mbl - mfl - mbr;
-        rb.AddRelativeTorque(transform.up * 0.8f * torque);
+        //float torque = mfr + mbl - mfl - mbr;
+        float torque = -mfr - mbl + mfl + mbr;
+        rb.AddRelativeTorque(transform.up * 1f * torque);
     }
     
     public float NormalizeAngle(float value, float start, float end)

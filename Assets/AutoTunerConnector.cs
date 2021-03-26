@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
+using UnityEngine.InputSystem.HID;
 
 public class AutoTunerConnector : MonoBehaviour
 {
@@ -15,6 +16,45 @@ public class AutoTunerConnector : MonoBehaviour
     
     public string ip;
     public int port;
+
+    PIDAutotuner tuner = new PIDAutotuner();
+    private long microseconds;
+    private bool printed = false;
+    public bool disabled = false;
+    
+    public void Start()
+    {
+        tuner.setTargetInputValue(0f);
+        tuner.setLoopInterval((long)(Time.fixedDeltaTime * 1E6));
+        tuner.setOutputRange(-20, 20);
+        tuner.setZNMode(ZNMode.ZNModeBasicPID);
+        tuner.startTuningLoop(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000);
+        tuner.setTuningCycles(100);
+    }
+
+    public void FixedUpdate()
+    {
+        if (disabled) return;
+        if(!tuner.isFinished())
+            Tune();
+        else if (!printed)
+        {
+            Debug.Log("Kp = " + tuner.getKp());
+            Debug.Log("Ki = " + tuner.getKi());
+            Debug.Log("Kd = " + tuner.getKd());
+            printed = true;
+        }
+    }
+
+    [ContextMenu("Tune")]
+    public void Tune()
+    {
+        long prevMicroseconds = microseconds;
+        microseconds = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        float input = underSimulation.angularVelocity.y;
+        double output = tuner.tunePID(input, microseconds);
+        underSimulation.GetComponent<TestTorque>().yaw = (float)output;
+    }
 
     [ContextMenu("Bind")]
     public void Connect()
