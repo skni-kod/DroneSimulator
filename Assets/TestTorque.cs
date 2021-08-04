@@ -71,12 +71,7 @@ public class TestTorque : MonoBehaviour
 
     public PID forwardVelocityPID = new PID();
     public PID rightVelocityPID = new PID();
-
-    public float CT = 0.33f;
-    public float CP = 0.033f;
-    public float R = 0.40f;
-    public float Ro = 1.18415f;
-
+    
     [UPyPlot.UPyPlotController.UPyProbe]
     public float output = 0.0f;
 
@@ -98,15 +93,6 @@ public class TestTorque : MonoBehaviour
     {
         Vector4 input = new Vector4();
 
-        /*
-         * https://pl.wikipedia.org/wiki/K%C4%85ty_RPY
-         * input.x - prawa gałka góra-dół. Wysokośc drona.
-         * input.y - prawa gałka lewo-prawo. Obrót drona w osi yaw. (Kierunek)
-         * input.z - lewa gałka lewo-prawo. Obrót drona w osi roll. (lewo-prawo)
-         * input.w - lewa gałka góra-dół. Obrót drona w osi pitch. (przód-tył).
-         * <-1, 1> - zakres wartości.
-         *
-         */
         if (typeOfInput == TypeOfInput.GAMEPAD)
         {
             var gamepad = Gamepad.current;
@@ -150,13 +136,10 @@ public class TestTorque : MonoBehaviour
         target = targetYawVelocity;
 
         float thrust = thurstPID.CalculateCurrentAnswer(currentVerticalVelocity, targetVerticalVelocity);
-        if (ownYawPid)
-            yaw = 0;//yawPID.CalculateCurrentAnswer(currentYawVelocity, targetYawVelocity);
-        float pitch = 0;//pitchPID.CalculateCurrentAnswer(currentPitchVelocity, targetPitchVelocity);
-        float roll = 0;//rollPID.CalculateCurrentAnswer(currentRollVelocity, targetRollVelocity);
-
-        target = targetVerticalVelocity;
-        output = currentVerticalVelocity;
+        if(ownYawPid)
+            yaw = yawPID.CalculateCurrentAnswer(currentYawVelocity, targetYawVelocity);
+        float pitch = pitchPID.CalculateCurrentAnswer(currentPitchVelocity, targetPitchVelocity);
+        float roll = rollPID.CalculateCurrentAnswer(currentRollVelocity, targetRollVelocity);
 
         //Debug.Log("++++++++++++++++++++++++++++++++++++++++++++++");
         //Debug.Log(currentRollVelocity);
@@ -186,26 +169,26 @@ public class TestTorque : MonoBehaviour
         var mbl = thrust - pitch + roll - yaw;
         var mbr = thrust - pitch - roll + yaw;
 
-        mfr = Mathf.Clamp(mfr, 0, 10000);
-        mfl = Mathf.Clamp(mfl, 0, 10000);
-        mbr = Mathf.Clamp(mbr, 0, 10000);
-        mbl = Mathf.Clamp(mbl, 0, 10000);
+        mfr = Mathf.Clamp(mfr, 0, 20);
+        mfl = Mathf.Clamp(mfl, 0, 20);
+        mbr = Mathf.Clamp(mbr, 0, 20);
+        mbl = Mathf.Clamp(mbl, 0, 20);
         
         Debug.Log("Mfr: " + mfr + " Mfl: " + mfl + " Mbl: " + mbl + " Mbr: " + mbr );
         
-        rb.AddForceAtPosition(this.transform.up * getTrustValue(mfr), mfrTransform.position);
-        rb.AddForceAtPosition(this.transform.up * getTrustValue(mfl), mflTransform.position);
-        rb.AddForceAtPosition(this.transform.up * getTrustValue(mbr), mrrTransform.position);
-        rb.AddForceAtPosition(this.transform.up * getTrustValue(mbl), mrlTransform.position);
+        rb.AddForceAtPosition(this.transform.up * mfr, mfrTransform.position);
+        rb.AddForceAtPosition(this.transform.up * mfl, mflTransform.position);
+        rb.AddForceAtPosition(this.transform.up * mbr, mrrTransform.position);
+        rb.AddForceAtPosition(this.transform.up * mbl, mrlTransform.position);
         
-        Debug.DrawLine(mfrTransform.position, mfrTransform.position + this.transform.up * getTrustValue(mfr));
-        Debug.DrawLine(mflTransform.position, mflTransform.position + this.transform.up * getTrustValue(mfl));
-        Debug.DrawLine(mrrTransform.position, mrrTransform.position + this.transform.up * getTrustValue(mbr));
-        Debug.DrawLine(mrlTransform.position, mrlTransform.position + this.transform.up * getTrustValue(mbl));
+        Debug.DrawLine(mfrTransform.position, mfrTransform.position + this.transform.up * mfr);
+        Debug.DrawLine(mflTransform.position, mflTransform.position + this.transform.up * mfl);
+        Debug.DrawLine(mrrTransform.position, mrrTransform.position + this.transform.up * mbr);
+        Debug.DrawLine(mrlTransform.position, mrlTransform.position + this.transform.up * mbl);
         Debug.DrawLine(transform.position, transform.position + transform.forward * 3, Color.red);
 
         //float torque = mfr + mbl - mfl - mbr;
-        float torque = -getTorqueValue(mfr) - getTorqueValue(mbl) + getTorqueValue(mfl) + getTorqueValue(mbr);
+        float torque = -mfr - mbl + mfl + mbr;
         rb.AddRelativeTorque(transform.up * 1f * torque);
     }
     
@@ -214,15 +197,5 @@ public class TestTorque : MonoBehaviour
         float width = end - start;
         float offsetValue = value - start;
         return ( offsetValue - ( Mathf.Floor( offsetValue / width ) * width ) ) + start ;
-    }
-
-    public float getTrustValue(float V)
-    {
-        return 0.5f * Ro * V * V * Mathf.PI * R * R * CT;
-    }
-
-    public float getTorqueValue(float V)
-    {
-        return 0.5f * Ro * V * V * Mathf.PI * R * R * R * CT;
     }
 }
